@@ -1,0 +1,24 @@
+name: files_tech_core
+description: "Code partagé entre les apps Files Tech (PDF Tech, Read Files Tech, Pass Tech)."
+version: 0.1.0
+publish_to: 'none'
+
+environment:
+  sdk: ^3.11.5
+  flutter: ">=1.17.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  http: ^1.2.0
+  shared_preferences: ^2.3.2
+  share_plus: ^10.0.3
+  flutter_markdown: ^0.7.4
+  url_launcher: ^6.3.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
