@@ -1,0 +1,20 @@
+files_tech_core
+Copyright 2026 Files Tech / Patrice
+
+This product includes software developed by Files Tech / Patrice
+(https://www.files-tech.com).
+
+Licensed under the Apache License, Version 2.0 (the "License");
+see LICENSE for details.
+
+Code partagé entre les apps Files Tech :
+- PDF Tech     (https://github.com/gitubpatrice/PDF-TECH)
+- Read Files Tech (https://github.com/gitubpatrice/READ-FILES-TECH)
+- Pass Tech    (https://github.com/gitubpatrice/pass_tech)
+
+Third-party Dart packages used (see pubspec.yaml for versions) :
+- http               (BSD 3-Clause) — https://pub.dev/packages/http
+- shared_preferences (BSD 3-Clause) — https://pub.dev/packages/shared_preferences
+- share_plus         (BSD 3-Clause) — https://pub.dev/packages/share_plus
+- flutter_markdown   (BSD 3-Clause) — https://pub.dev/packages/flutter_markdown
+- url_launcher       (BSD 3-Clause) — https://pub.dev/packages/url_launcher
