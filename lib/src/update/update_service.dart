@@ -96,22 +96,41 @@ class UpdateService {
       await prefs.setInt(_cacheKey, now);
 
       final data = jsonDecode(response.body) as Map<String, dynamic>;
-      final tag = (data['tag_name'] as String).replaceFirst('v', '');
+
+      // Validation type-safe : si GitHub renvoie un payload inattendu (ou
+      // compte compromis publiant un asset au format custom), on refuse au
+      // lieu de crasher.
+      final tagRaw = data['tag_name'];
+      if (tagRaw is! String) return null;
+      final tag = tagRaw.replaceFirst(RegExp(r'^v'), '');
+      // Regex semver stricte X.Y.Z (pas de pre-release, cohérent avec le
+      // versioning Files Tech).
+      if (!RegExp(r'^\d+\.\d+\.\d+$').hasMatch(tag)) return null;
       if (!_isNewer(tag, currentVersion)) return null;
 
+      // Whitelist hosts GitHub pour l'apkUrl. Empêche un release malicieuse
+      // (compte compromis) de pointer vers un APK hébergé hors github.com.
       String? apkUrl;
-      final assets = data['assets'] as List<dynamic>?;
-      if (assets != null) {
+      final assets = data['assets'];
+      if (assets is List) {
         for (final a in assets) {
-          final name = a['name'] as String;
-          if (name.endsWith('.apk')) {
-            apkUrl = a['browser_download_url'] as String;
-            break;
+          if (a is! Map) continue;
+          final name = a['name'];
+          final url = a['browser_download_url'];
+          if (name is! String || url is! String) continue;
+          if (!name.toLowerCase().endsWith('.apk')) continue;
+          final u = Uri.tryParse(url);
+          if (u == null || u.scheme != 'https') continue;
+          if (u.host != 'github.com' &&
+              u.host != 'objects.githubusercontent.com') {
+            continue;
           }
+          apkUrl = url;
+          break;
         }
       }
 
-      final body = data['body'] as String? ?? '';
+      final body = data['body'] is String ? data['body'] as String : '';
       return UpdateInfo(
         version: tag,
         body: body,

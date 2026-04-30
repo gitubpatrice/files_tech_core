@@ -1,4 +1,5 @@
 import 'dart:convert';
+import '../utils/format_utils.dart';
 
 /// Métadonnées d'un fichier récemment ouvert dans une app Files Tech.
 ///
@@ -40,24 +41,48 @@ class RecentFile {
         'isFavorite': isFavorite,
       };
 
-  factory RecentFile.fromJson(Map<String, dynamic> json) => RecentFile(
-        path: json['path'] as String,
-        name: json['name'] as String,
-        lastOpened: DateTime.parse(json['lastOpened'] as String),
-        sizeBytes: json['sizeBytes'] as int,
-        isFavorite: json['isFavorite'] as bool? ?? false,
-      );
+  /// Parse défensif : tout champ manquant ou de mauvais type lève
+  /// [FormatException] (au lieu d'un `TypeError` cryptique). Le service
+  /// `RecentFilesService.load` attrape l'exception et skip l'entrée
+  /// corrompue — pas de crash boot si les prefs ont été trafiquées
+  /// (DoS persistant prévenu).
+  factory RecentFile.fromJson(Map<String, dynamic> json) {
+    final path = json['path'];
+    final name = json['name'];
+    final iso  = json['lastOpened'];
+    final size = json['sizeBytes'];
+    if (path is! String || path.isEmpty) {
+      throw const FormatException('RecentFile JSON invalide : path');
+    }
+    if (name is! String || name.isEmpty) {
+      throw const FormatException('RecentFile JSON invalide : name');
+    }
+    if (iso is! String) {
+      throw const FormatException('RecentFile JSON invalide : lastOpened');
+    }
+    if (size is! int || size < 0) {
+      throw const FormatException('RecentFile JSON invalide : sizeBytes');
+    }
+    final DateTime lastOpened;
+    try {
+      lastOpened = DateTime.parse(iso);
+    } catch (_) {
+      throw const FormatException('RecentFile JSON invalide : lastOpened format');
+    }
+    return RecentFile(
+      path: path,
+      name: name,
+      lastOpened: lastOpened,
+      sizeBytes: size,
+      isFavorite: json['isFavorite'] as bool? ?? false,
+    );
+  }
 
   String toJsonString() => jsonEncode(toJson());
   factory RecentFile.fromJsonString(String s) =>
       RecentFile.fromJson(jsonDecode(s) as Map<String, dynamic>);
 
-  /// Format humanisé "1.2 Mo" / "456 Ko" / "789 B".
-  String get formattedSize {
-    if (sizeBytes < 1024) return '$sizeBytes B';
-    if (sizeBytes < 1024 * 1024) {
-      return '${(sizeBytes / 1024).toStringAsFixed(1)} Ko';
-    }
-    return '${(sizeBytes / (1024 * 1024)).toStringAsFixed(1)} Mo';
-  }
+  /// Format humanisé "1.2 Mo" / "456 Ko" / "789 B" / "2.0 Go".
+  /// Délègue à [FormatUtils.bytes] (source unique).
+  String get formattedSize => FormatUtils.bytes(sizeBytes);
 }

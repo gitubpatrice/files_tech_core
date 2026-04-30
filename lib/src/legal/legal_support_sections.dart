@@ -4,18 +4,43 @@ import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 /// Sections "Aide & support" + "Mentions légales" partagées par toutes les
-/// apps Files Tech. Reçoit la version pour préremplir les emails de support.
+/// apps Files Tech.
+///
+/// Sécurité :
+/// - Liens limités aux schemes `https`, `http`, `mailto` (anti `intent:`,
+///   `javascript:`, `file:` même sur Markdown forgé)
+/// - Pas de `userInfo` accepté (anti `https://user:pass@evil.com`)
+/// - Subject/body de mail dépouillés de CRLF (anti header injection)
+/// - Assets MD configurables (l'app consommatrice doit déclarer
+///   `assets/legal/PRIVACY.fr.md` et `TERMS.fr.md` dans son `pubspec.yaml`)
 class LegalSupportSections extends StatelessWidget {
   final String appName;
   final String version;
+  final String contactEmail;
+  final String websiteUrl;
+  final String privacyAsset;
+  final String termsAsset;
+
   const LegalSupportSections({
     super.key,
     required this.appName,
     required this.version,
+    this.contactEmail = 'contact@files-tech.com',
+    this.websiteUrl   = 'https://files-tech.com',
+    this.privacyAsset = 'assets/legal/PRIVACY.fr.md',
+    this.termsAsset   = 'assets/legal/TERMS.fr.md',
   });
 
-  static const _email   = 'contact@files-tech.com';
-  static const _website = 'https://files-tech.com';
+  /// Schemes autorisés pour `_openUrl` et les liens Markdown.
+  /// Tout autre scheme (intent, javascript, file, content, app, market…) est
+  /// refusé silencieusement.
+  static const _allowedSchemes = {'https', 'http', 'mailto'};
+
+  static bool _isSafeUri(Uri u) {
+    if (!_allowedSchemes.contains(u.scheme.toLowerCase())) return false;
+    if (u.userInfo.isNotEmpty) return false; // anti credential phishing
+    return true;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -30,25 +55,25 @@ class LegalSupportSections extends StatelessWidget {
             ListTile(
               leading: Icon(Icons.email_outlined, color: cs.primary),
               title: const Text('Contacter le support'),
-              subtitle: const Text(_email),
+              subtitle: Text(contactEmail),
               trailing: const Icon(Icons.open_in_new, size: 16),
-              onTap: () => _openMail(context, _email,
+              onTap: () => _openMail(context, contactEmail,
                   '$appName v$version — support'),
             ),
             const Divider(height: 1),
             ListTile(
               leading: Icon(Icons.public, color: cs.primary),
               title: const Text('Site officiel'),
-              subtitle: const Text('files-tech.com'),
+              subtitle: Text(_displayHost(websiteUrl)),
               trailing: const Icon(Icons.open_in_new, size: 16),
-              onTap: () => _openUrl(context, _website),
+              onTap: () => _openUrl(context, websiteUrl),
             ),
             const Divider(height: 1),
             ListTile(
               leading: Icon(Icons.bug_report_outlined, color: cs.primary),
               title: const Text('Signaler un bug'),
               subtitle: const Text('Email avec version pré-remplie'),
-              onTap: () => _openMail(context, _email,
+              onTap: () => _openMail(context, contactEmail,
                   '$appName v$version — bug',
                   body: 'Décrivez le problème rencontré :\n\n\n'
                       '— Version : $version\n— Appareil : '),
@@ -68,7 +93,7 @@ class LegalSupportSections extends StatelessWidget {
               trailing: const Icon(Icons.chevron_right),
               onTap: () => _openLegal(context,
                   title: 'Politique de confidentialité',
-                  asset: 'assets/legal/PRIVACY.fr.md'),
+                  asset: privacyAsset),
             ),
             const Divider(height: 1),
             ListTile(
@@ -77,7 +102,7 @@ class LegalSupportSections extends StatelessWidget {
               trailing: const Icon(Icons.chevron_right),
               onTap: () => _openLegal(context,
                   title: 'Conditions d\'utilisation',
-                  asset: 'assets/legal/TERMS.fr.md'),
+                  asset: termsAsset),
             ),
             const Divider(height: 1),
             ListTile(
@@ -100,6 +125,11 @@ class LegalSupportSections extends StatelessWidget {
     );
   }
 
+  String _displayHost(String url) {
+    final u = Uri.tryParse(url);
+    return (u != null && u.host.isNotEmpty) ? u.host : url;
+  }
+
   Widget _section(BuildContext context, String title) {
     return Padding(
       padding: const EdgeInsets.only(left: 2),
@@ -113,37 +143,57 @@ class LegalSupportSections extends StatelessWidget {
 
   Future<void> _openUrl(BuildContext context, String url) async {
     final messenger = ScaffoldMessenger.of(context);
-    final uri = Uri.parse(url);
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri, mode: LaunchMode.externalApplication);
-    } else {
-      messenger.showSnackBar(SnackBar(content: Text('Impossible d\'ouvrir : $url')));
+    final uri = Uri.tryParse(url);
+    if (uri == null || !_isSafeUri(uri)) {
+      messenger.showSnackBar(const SnackBar(
+        content: Text('Lien refusé pour des raisons de sécurité.'),
+      ));
+      return;
+    }
+    try {
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      } else {
+        messenger.showSnackBar(
+            SnackBar(content: Text('Impossible d\'ouvrir : $url')));
+      }
+    } catch (_) {
+      messenger.showSnackBar(const SnackBar(
+          content: Text('Erreur d\'ouverture du lien.')));
     }
   }
 
   Future<void> _openMail(BuildContext context, String to, String subject,
       {String? body}) async {
     final messenger = ScaffoldMessenger.of(context);
-    final params = <String, String>{'subject': subject};
-    if (body != null) params['body'] = body;
-    final query = params.entries.map((e) =>
-        '${Uri.encodeComponent(e.key)}=${Uri.encodeComponent(e.value)}').join('&');
-    final uri = Uri.parse('mailto:$to?$query');
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri);
-    } else {
-      await Clipboard.setData(ClipboardData(text: to));
-      messenger.showSnackBar(SnackBar(
-        content: Text('Aucune app mail. Adresse copiée : $to'),
-      ));
-    }
+    // Strip CRLF dans les headers (anti mailto header injection).
+    final safeSubject = subject.replaceAll(RegExp(r'[\r\n]'), ' ');
+    final safeBody    = body?.replaceAll(RegExp(r'\r\n?'), '\n');
+    final uri = Uri(
+      scheme: 'mailto',
+      path: to,
+      queryParameters: <String, String>{
+        'subject': safeSubject,
+        'body': ?safeBody,
+      },
+    );
+    try {
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri);
+        return;
+      }
+    } catch (_) {/* fall through */}
+    await Clipboard.setData(ClipboardData(text: to));
+    messenger.showSnackBar(SnackBar(
+      content: Text('Aucune app mail. Adresse copiée : $to'),
+    ));
   }
 
   void _openLegal(BuildContext context,
       {required String title, required String asset}) {
-    Navigator.push(
+    Navigator.push<void>(
       context,
-      MaterialPageRoute(
+      MaterialPageRoute<void>(
         builder: (_) => _LegalScreen(title: title, asset: asset),
       ),
     );
@@ -154,6 +204,9 @@ class _LegalScreen extends StatelessWidget {
   final String title;
   final String asset;
   const _LegalScreen({required this.title, required this.asset});
+
+  // Même whitelist scheme que le parent.
+  static const _allowedSchemes = {'https', 'http', 'mailto'};
 
   @override
   Widget build(BuildContext context) {
@@ -174,10 +227,15 @@ class _LegalScreen extends StatelessWidget {
             selectable: true,
             onTapLink: (text, href, title) async {
               if (href == null) return;
-              final uri = Uri.parse(href);
-              if (await canLaunchUrl(uri)) {
-                await launchUrl(uri, mode: LaunchMode.externalApplication);
-              }
+              final uri = Uri.tryParse(href);
+              if (uri == null) return;
+              if (!_allowedSchemes.contains(uri.scheme.toLowerCase())) return;
+              if (uri.userInfo.isNotEmpty) return;
+              try {
+                if (await canLaunchUrl(uri)) {
+                  await launchUrl(uri, mode: LaunchMode.externalApplication);
+                }
+              } catch (_) {/* silent */}
             },
           );
         },

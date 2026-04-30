@@ -8,6 +8,9 @@ class CloudTargets {
   static const kDrive      = 'com.infomaniak.drive';
   static const googleDrive = 'com.google.android.apps.docs';
   static const protonDrive = 'me.proton.android.drive';
+
+  /// Cible cross-app : ouvre un PDF directement dans PDF Tech depuis RFT.
+  /// Utilisé par RFT (file_explorer) — pas de cible inverse pour le moment.
   static const pdfTech     = 'com.pdftech.pdf_tech';
 }
 
@@ -66,6 +69,16 @@ class CloudShareRow extends StatelessWidget {
         content: Text(e.code == 'NOT_INSTALLED'
             ? '$label n\'est pas installé sur cet appareil.'
             : 'Erreur d\'envoi vers $label.'),
+      ));
+    } on MissingPluginException {
+      // Channel non enregistré côté Kotlin — typiquement en hot-reload sur un
+      // build qui ne contient pas encore le handler. Évite le crash.
+      messenger.showSnackBar(SnackBar(
+        content: Text('Service indisponible pour $label.'),
+      ));
+    } catch (_) {
+      messenger.showSnackBar(SnackBar(
+        content: Text('Erreur d\'envoi vers $label.'),
       ));
     }
   }
