@@ -1,5 +1,9 @@
 # files_tech_core
 
+[![CI](https://github.com/gitubpatrice/files_tech_core/actions/workflows/ci.yml/badge.svg)](https://github.com/gitubpatrice/files_tech_core/actions/workflows/ci.yml)
+[![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
+[![Flutter](https://img.shields.io/badge/Flutter-stable-02569B?logo=flutter)](https://flutter.dev)
+
 Code partagé entre les apps Files Tech (PDF Tech, Read Files Tech, Pass Tech).
 Package local Flutter (path-dependency) — **non publié sur pub.dev**.
 
