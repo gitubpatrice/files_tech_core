@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart' show rootBundle, Clipboard, ClipboardData;
+import 'package:flutter/services.dart'
+    show rootBundle, Clipboard, ClipboardData;
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -26,9 +27,9 @@ class LegalSupportSections extends StatelessWidget {
     required this.appName,
     required this.version,
     this.contactEmail = 'contact@files-tech.com',
-    this.websiteUrl   = 'https://files-tech.com',
+    this.websiteUrl = 'https://files-tech.com',
     this.privacyAsset = 'assets/legal/PRIVACY.fr.md',
-    this.termsAsset   = 'assets/legal/TERMS.fr.md',
+    this.termsAsset = 'assets/legal/TERMS.fr.md',
   });
 
   /// Schemes autorisés pour `_openUrl` et les liens Markdown.
@@ -51,34 +52,43 @@ class LegalSupportSections extends StatelessWidget {
         _section(context, 'Aide & support'),
         const SizedBox(height: 8),
         Card(
-          child: Column(children: [
-            ListTile(
-              leading: Icon(Icons.email_outlined, color: cs.primary),
-              title: const Text('Contacter le support'),
-              subtitle: Text(contactEmail),
-              trailing: const Icon(Icons.open_in_new, size: 16),
-              onTap: () => _openMail(context, contactEmail,
-                  '$appName v$version — support'),
-            ),
-            const Divider(height: 1),
-            ListTile(
-              leading: Icon(Icons.public, color: cs.primary),
-              title: const Text('Site officiel'),
-              subtitle: Text(_displayHost(websiteUrl)),
-              trailing: const Icon(Icons.open_in_new, size: 16),
-              onTap: () => _openUrl(context, websiteUrl),
-            ),
-            const Divider(height: 1),
-            ListTile(
-              leading: Icon(Icons.bug_report_outlined, color: cs.primary),
-              title: const Text('Signaler un bug'),
-              subtitle: const Text('Email avec version pré-remplie'),
-              onTap: () => _openMail(context, contactEmail,
+          child: Column(
+            children: [
+              ListTile(
+                leading: Icon(Icons.email_outlined, color: cs.primary),
+                title: const Text('Contacter le support'),
+                subtitle: Text(contactEmail),
+                trailing: const Icon(Icons.open_in_new, size: 16),
+                onTap: () => _openMail(
+                  context,
+                  contactEmail,
+                  '$appName v$version — support',
+                ),
+              ),
+              const Divider(height: 1),
+              ListTile(
+                leading: Icon(Icons.public, color: cs.primary),
+                title: const Text('Site officiel'),
+                subtitle: Text(_displayHost(websiteUrl)),
+                trailing: const Icon(Icons.open_in_new, size: 16),
+                onTap: () => _openUrl(context, websiteUrl),
+              ),
+              const Divider(height: 1),
+              ListTile(
+                leading: Icon(Icons.bug_report_outlined, color: cs.primary),
+                title: const Text('Signaler un bug'),
+                subtitle: const Text('Email avec version pré-remplie'),
+                onTap: () => _openMail(
+                  context,
+                  contactEmail,
                   '$appName v$version — bug',
-                  body: 'Décrivez le problème rencontré :\n\n\n'
-                      '— Version : $version\n— Appareil : '),
-            ),
-          ]),
+                  body:
+                      'Décrivez le problème rencontré :\n\n\n'
+                      '— Version : $version\n— Appareil : ',
+                ),
+              ),
+            ],
+          ),
         ),
 
         const SizedBox(height: 24),
@@ -86,33 +96,41 @@ class LegalSupportSections extends StatelessWidget {
         _section(context, 'Mentions légales'),
         const SizedBox(height: 8),
         Card(
-          child: Column(children: [
-            ListTile(
-              leading: Icon(Icons.privacy_tip_outlined, color: cs.primary),
-              title: const Text('Politique de confidentialité'),
-              trailing: const Icon(Icons.chevron_right),
-              onTap: () => _openLegal(context,
+          child: Column(
+            children: [
+              ListTile(
+                leading: Icon(Icons.privacy_tip_outlined, color: cs.primary),
+                title: const Text('Politique de confidentialité'),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => _openLegal(
+                  context,
                   title: 'Politique de confidentialité',
-                  asset: privacyAsset),
-            ),
-            const Divider(height: 1),
-            ListTile(
-              leading: Icon(Icons.gavel_outlined, color: cs.primary),
-              title: const Text('Conditions d\'utilisation'),
-              trailing: const Icon(Icons.chevron_right),
-              onTap: () => _openLegal(context,
+                  asset: privacyAsset,
+                ),
+              ),
+              const Divider(height: 1),
+              ListTile(
+                leading: Icon(Icons.gavel_outlined, color: cs.primary),
+                title: const Text('Conditions d\'utilisation'),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => _openLegal(
+                  context,
                   title: 'Conditions d\'utilisation',
-                  asset: termsAsset),
-            ),
-            const Divider(height: 1),
-            ListTile(
-              leading: Icon(Icons.copyright_outlined, color: cs.primary),
-              title: const Text('Licence'),
-              subtitle: const Text('Apache 2.0'),
-              onTap: () => _openUrl(context,
-                  'https://www.apache.org/licenses/LICENSE-2.0'),
-            ),
-          ]),
+                  asset: termsAsset,
+                ),
+              ),
+              const Divider(height: 1),
+              ListTile(
+                leading: Icon(Icons.copyright_outlined, color: cs.primary),
+                title: const Text('Licence'),
+                subtitle: const Text('Apache 2.0'),
+                onTap: () => _openUrl(
+                  context,
+                  'https://www.apache.org/licenses/LICENSE-2.0',
+                ),
+              ),
+            ],
+          ),
         ),
         const SizedBox(height: 16),
         Center(
@@ -133,11 +151,14 @@ class LegalSupportSections extends StatelessWidget {
   Widget _section(BuildContext context, String title) {
     return Padding(
       padding: const EdgeInsets.only(left: 2),
-      child: Text(title,
-          style: Theme.of(context).textTheme.titleSmall?.copyWith(
-              color: Colors.grey.shade600,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 0.5)),
+      child: Text(
+        title,
+        style: Theme.of(context).textTheme.titleSmall?.copyWith(
+          color: Colors.grey.shade600,
+          fontWeight: FontWeight.w700,
+          letterSpacing: 0.5,
+        ),
+      ),
     );
   }
 
@@ -145,30 +166,42 @@ class LegalSupportSections extends StatelessWidget {
     final messenger = ScaffoldMessenger.of(context);
     final uri = Uri.tryParse(url);
     if (uri == null || !_isSafeUri(uri)) {
-      messenger.showSnackBar(const SnackBar(
-        content: Text('Lien refusé pour des raisons de sécurité.'),
-      ));
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text('Lien refusé pour des raisons de sécurité.'),
+        ),
+      );
       return;
     }
+    // On NE FAIT PLUS de canLaunchUrl() au préalable : ce check est connu
+    // pour échouer même quand launchUrl() fonctionne (bug url_launcher
+    // Android — voir https://github.com/flutter/flutter/issues/93765).
+    // launchUrl jette PlatformException si le scheme n'a aucun handler →
+    // on capture proprement et on affiche le bon message.
     try {
-      if (await canLaunchUrl(uri)) {
-        await launchUrl(uri, mode: LaunchMode.externalApplication);
-      } else {
+      final ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
+      if (!ok) {
         messenger.showSnackBar(
-            SnackBar(content: Text('Impossible d\'ouvrir : $url')));
+          SnackBar(content: Text('Impossible d\'ouvrir : $url')),
+        );
       }
     } catch (_) {
-      messenger.showSnackBar(const SnackBar(
-          content: Text('Erreur d\'ouverture du lien.')));
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Aucune application disponible.')),
+      );
     }
   }
 
-  Future<void> _openMail(BuildContext context, String to, String subject,
-      {String? body}) async {
+  Future<void> _openMail(
+    BuildContext context,
+    String to,
+    String subject, {
+    String? body,
+  }) async {
     final messenger = ScaffoldMessenger.of(context);
     // Strip CRLF dans les headers (anti mailto header injection).
     final safeSubject = subject.replaceAll(RegExp(r'[\r\n]'), ' ');
-    final safeBody    = body?.replaceAll(RegExp(r'\r\n?'), '\n');
+    final safeBody = body?.replaceAll(RegExp(r'\r\n?'), '\n');
     final uri = Uri(
       scheme: 'mailto',
       path: to,
@@ -177,20 +210,25 @@ class LegalSupportSections extends StatelessWidget {
         'body': ?safeBody,
       },
     );
+    // Idem _openUrl : on n'utilise plus canLaunchUrl (faux négatifs).
+    // Si launchUrl jette ou retourne false, fallback clipboard.
     try {
-      if (await canLaunchUrl(uri)) {
-        await launchUrl(uri);
-        return;
-      }
-    } catch (_) {/* fall through */}
+      final ok = await launchUrl(uri);
+      if (ok) return;
+    } catch (_) {
+      /* fall through */
+    }
     await Clipboard.setData(ClipboardData(text: to));
-    messenger.showSnackBar(SnackBar(
-      content: Text('Aucune app mail. Adresse copiée : $to'),
-    ));
+    messenger.showSnackBar(
+      SnackBar(content: Text('Aucune app mail. Adresse copiée : $to')),
+    );
   }
 
-  void _openLegal(BuildContext context,
-      {required String title, required String asset}) {
+  void _openLegal(
+    BuildContext context, {
+    required String title,
+    required String asset,
+  }) {
     Navigator.push<void>(
       context,
       MaterialPageRoute<void>(
@@ -231,11 +269,12 @@ class _LegalScreen extends StatelessWidget {
               if (uri == null) return;
               if (!_allowedSchemes.contains(uri.scheme.toLowerCase())) return;
               if (uri.userInfo.isNotEmpty) return;
+              // Idem _openUrl : pas de canLaunchUrl (faux négatifs Android 11+).
               try {
-                if (await canLaunchUrl(uri)) {
-                  await launchUrl(uri, mode: LaunchMode.externalApplication);
-                }
-              } catch (_) {/* silent */}
+                await launchUrl(uri, mode: LaunchMode.externalApplication);
+              } catch (_) {
+                /* silent */
+              }
             },
           );
         },
