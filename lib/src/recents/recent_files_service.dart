@@ -18,10 +18,7 @@ class RecentFilesService {
   /// Nombre maximum d'entrées conservées (les plus anciennes sont éjectées).
   final int maxFiles;
 
-  const RecentFilesService({
-    this.key = 'recent_files',
-    this.maxFiles = 20,
-  });
+  const RecentFilesService({this.key = 'recent_files', this.maxFiles = 20});
 
   /// Charge la liste persistée, filtre les fichiers disparus + entrées
   /// corrompues, trie par date décroissante.
@@ -50,7 +47,9 @@ class RecentFilesService {
   /// `isFavorite` existant. Refuse silencieusement les paths invalides
   /// (basename `..`, séparateur, NUL).
   Future<List<RecentFile>> addOrUpdate(
-      List<RecentFile> current, String path) async {
+    List<RecentFile> current,
+    String path,
+  ) async {
     final file = File(path);
     if (!await file.exists()) return current;
     final String name;
@@ -60,7 +59,9 @@ class RecentFilesService {
       return current;
     }
     final size = await file.length();
-    final existing = current.where((f) => f.path == path).cast<RecentFile?>()
+    final existing = current
+        .where((f) => f.path == path)
+        .cast<RecentFile?>()
         .firstWhere((_) => true, orElse: () => null);
     final isFav = existing?.isFavorite ?? false;
     final updated = [
@@ -78,15 +79,16 @@ class RecentFilesService {
     return trimmed;
   }
 
-  Future<List<RecentFile>> remove(
-      List<RecentFile> current, String path) async {
+  Future<List<RecentFile>> remove(List<RecentFile> current, String path) async {
     final updated = current.where((f) => f.path != path).toList();
     await _save(updated);
     return updated;
   }
 
   Future<List<RecentFile>> toggleFavorite(
-      List<RecentFile> current, String path) async {
+    List<RecentFile> current,
+    String path,
+  ) async {
     final updated = current
         .map((f) => f.path == path ? f.copyWith(isFavorite: !f.isFavorite) : f)
         .toList();

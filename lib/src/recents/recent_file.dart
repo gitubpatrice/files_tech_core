@@ -21,12 +21,12 @@ class RecentFile {
   });
 
   RecentFile copyWith({bool? isFavorite}) => RecentFile(
-        path: path,
-        name: name,
-        lastOpened: lastOpened,
-        sizeBytes: sizeBytes,
-        isFavorite: isFavorite ?? this.isFavorite,
-      );
+    path: path,
+    name: name,
+    lastOpened: lastOpened,
+    sizeBytes: sizeBytes,
+    isFavorite: isFavorite ?? this.isFavorite,
+  );
 
   /// Extension du fichier (sans le point), en minuscules. Vide si pas de point.
   /// Exemple : `RecentFile(name: 'Foo.PDF').extension == 'pdf'`.
@@ -34,12 +34,12 @@ class RecentFile {
       name.contains('.') ? name.split('.').last.toLowerCase() : '';
 
   Map<String, dynamic> toJson() => {
-        'path': path,
-        'name': name,
-        'lastOpened': lastOpened.toIso8601String(),
-        'sizeBytes': sizeBytes,
-        'isFavorite': isFavorite,
-      };
+    'path': path,
+    'name': name,
+    'lastOpened': lastOpened.toIso8601String(),
+    'sizeBytes': sizeBytes,
+    'isFavorite': isFavorite,
+  };
 
   /// Parse défensif : tout champ manquant ou de mauvais type lève
   /// [FormatException] (au lieu d'un `TypeError` cryptique). Le service
@@ -49,7 +49,7 @@ class RecentFile {
   factory RecentFile.fromJson(Map<String, dynamic> json) {
     final path = json['path'];
     final name = json['name'];
-    final iso  = json['lastOpened'];
+    final iso = json['lastOpened'];
     final size = json['sizeBytes'];
     if (path is! String || path.isEmpty) {
       throw const FormatException('RecentFile JSON invalide : path');
@@ -67,7 +67,9 @@ class RecentFile {
     try {
       lastOpened = DateTime.parse(iso);
     } catch (_) {
-      throw const FormatException('RecentFile JSON invalide : lastOpened format');
+      throw const FormatException(
+        'RecentFile JSON invalide : lastOpened format',
+      );
     }
     return RecentFile(
       path: path,

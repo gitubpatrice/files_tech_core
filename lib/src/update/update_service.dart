@@ -85,7 +85,8 @@ class UpdateService {
       if (!force && now - last < cacheDuration.inMilliseconds) return null;
 
       final uri = Uri.parse(
-          'https://api.github.com/repos/$owner/$repo/releases/latest');
+        'https://api.github.com/repos/$owner/$repo/releases/latest',
+      );
       final response = await http
           .get(uri, headers: {'Accept': 'application/vnd.github+json'})
           .timeout(const Duration(seconds: 10));
