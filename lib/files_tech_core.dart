@@ -18,3 +18,6 @@ export 'src/legal/legal_support_sections.dart';
 
 // Utils : formatage humanisé + sécurité chemins.
 export 'src/utils/format_utils.dart';
+
+// Security : helpers crypto bas niveau (random, wipe, constant-time eq).
+export 'src/security/secret_bytes.dart';
