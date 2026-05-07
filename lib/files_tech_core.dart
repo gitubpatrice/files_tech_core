@@ -18,6 +18,10 @@ export 'src/legal/legal_support_sections.dart';
 
 // Utils : formatage humanisé + sécurité chemins.
 export 'src/utils/format_utils.dart';
+// Utils : découpage paths (basename / extension / nom court).
+export 'src/utils/path_utils.dart';
+// Utils : seuils perfs partagés (isolate, viewer max).
+export 'src/utils/perf_thresholds.dart';
 
-// Security : helpers crypto bas niveau (random, wipe, constant-time eq).
+// Security : helpers crypto bas niveau (random, wipe, constant-time eq, hex).
 export 'src/security/secret_bytes.dart';

@@ -256,6 +256,70 @@ void main() {
     });
   });
 
+  group('SecretBytes.toHex', () {
+    test('simple bytes', () {
+      expect(SecretBytes.toHex(Uint8List.fromList([0xAB, 0xCD])), 'abcd');
+    });
+    test('zero padding', () {
+      expect(
+        SecretBytes.toHex(Uint8List.fromList([0x00, 0x01, 0x0F])),
+        '00010f',
+      );
+    });
+    test('empty buffer returns empty string', () {
+      expect(SecretBytes.toHex(Uint8List(0)), '');
+    });
+    test('all 0xFF', () {
+      expect(SecretBytes.toHex(Uint8List.fromList([0xFF, 0xFF])), 'ffff');
+    });
+    test('round-trip toHex/fromHex', () {
+      final orig = Uint8List.fromList([0xDE, 0xAD, 0xBE, 0xEF, 0x00, 0x42]);
+      expect(SecretBytes.fromHex(SecretBytes.toHex(orig)), orig);
+    });
+  });
+
+  group('SecretBytes.fromHex', () {
+    test('simple decode', () {
+      expect(SecretBytes.fromHex('abcd'), Uint8List.fromList([0xAB, 0xCD]));
+    });
+    test('uppercase tolerated', () {
+      expect(
+        SecretBytes.fromHex('DEADBEEF'),
+        Uint8List.fromList([0xDE, 0xAD, 0xBE, 0xEF]),
+      );
+    });
+    test('empty string returns empty', () {
+      expect(SecretBytes.fromHex(''), isEmpty);
+    });
+    test('odd length throws', () {
+      expect(() => SecretBytes.fromHex('abc'), throwsFormatException);
+    });
+    test('invalid hex chars throws', () {
+      expect(() => SecretBytes.fromHex('zzzz'), throwsFormatException);
+    });
+  });
+
+  group('SecretBytes.constantTimeEqHex', () {
+    test('equal returns true', () {
+      expect(SecretBytes.constantTimeEqHex('abcd', 'abcd'), isTrue);
+    });
+    test('different content returns false', () {
+      expect(SecretBytes.constantTimeEqHex('abcd', 'abce'), isFalse);
+    });
+    test('different lengths throws', () {
+      expect(
+        () => SecretBytes.constantTimeEqHex('abcd', 'abcdef'),
+        throwsArgumentError,
+      );
+    });
+    test('both empty returns true', () {
+      expect(SecretBytes.constantTimeEqHex('', ''), isTrue);
+    });
+    test('case sensitive (does not normalize)', () {
+      expect(SecretBytes.constantTimeEqHex('abcd', 'ABCD'), isFalse);
+    });
+  });
+
   // ── UpdateService ──────────────────────────────────────────────────────────
 
   group('UpdateService.isNewer', () {

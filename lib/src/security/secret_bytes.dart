@@ -63,4 +63,53 @@ abstract final class SecretBytes {
     }
     return diff == 0;
   }
+
+  /// Encode des bytes en hex lowercase. Ex: `[0xAB, 0xCD]` → `"abcd"`.
+  ///
+  /// Conçu pour les hash de fichier (SHA-256 stocké en base, fingerprints
+  /// de modèle ML, IDs dérivés). Ne PAS utiliser pour stocker une clé brute
+  /// (pas de wipe possible sur les String — Dart les met en pool).
+  static String toHex(Uint8List bytes) {
+    final buf = StringBuffer();
+    for (final b in bytes) {
+      buf.write(b.toRadixString(16).padLeft(2, '0'));
+    }
+    return buf.toString();
+  }
+
+  /// Décode une hex string en bytes. Lance [FormatException] si invalide.
+  /// Tolère uppercase et lowercase. Refuse une longueur impaire.
+  ///
+  /// Réciproque de [toHex] : `fromHex(toHex(b))` == `b` pour tout `b`.
+  static Uint8List fromHex(String hex) {
+    if (hex.length.isOdd) {
+      throw const FormatException('hex string with odd length');
+    }
+    final out = Uint8List(hex.length ~/ 2);
+    for (var i = 0; i < out.length; i++) {
+      final byte = int.parse(hex.substring(i * 2, i * 2 + 2), radix: 16);
+      out[i] = byte;
+    }
+    return out;
+  }
+
+  /// Comparaison en temps constant de deux strings hex (sortie SHA-256, etc.).
+  /// Lance [ArgumentError] si tailles différentes — contrairement à
+  /// [constantTimeEq] sur bytes (qui retourne `false`), ici on sait que les
+  /// hashs comparés ont une taille fixe connue (64 hex chars pour SHA-256) et
+  /// une asymétrie indique un bug appelant qu'on veut signaler.
+  ///
+  /// Fonctionne directement sur la string sans la passer par [fromHex] : évite
+  /// l'allocation de buffers intermédiaires sur le hot path (vérif intégrité
+  /// répétée d'un fichier découpé en chunks).
+  static bool constantTimeEqHex(String a, String b) {
+    if (a.length != b.length) {
+      throw ArgumentError('hex strings must have same length');
+    }
+    var diff = 0;
+    for (var i = 0; i < a.length; i++) {
+      diff |= a.codeUnitAt(i) ^ b.codeUnitAt(i);
+    }
+    return diff == 0;
+  }
 }
