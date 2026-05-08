@@ -43,7 +43,13 @@ abstract final class SecretBytes {
   ///
   /// Sémantique identique à un `bytes.fillRange(0, bytes.length, 0)`.
   static void wipe(Uint8List bytes) {
-    bytes.fillRange(0, bytes.length, 0);
+    try {
+      bytes.fillRange(0, bytes.length, 0);
+    } catch (_) {
+      // Buffer non-modifiable (UnmodifiableUint8ListView retourné par
+      // certaines impls FFI de `cryptography_flutter`). Best-effort : on ne
+      // peut pas effacer une vue read-only — la mémoire sera libérée par GC.
+    }
   }
 
   /// Comparaison en temps constant — accumule l'OR des XOR sur toute la
