@@ -22,6 +22,27 @@ class LegalSupportSections extends StatelessWidget {
   final String privacyAsset;
   final String termsAsset;
 
+  /// Labels optionnels — defaults FR pour rétrocompatibilité avec les apps
+  /// qui n'ont pas encore branché leur AppLocalizations. Une app i18n FR/EN
+  /// peut passer les chaînes localisées depuis son ARB.
+  final String? helpSectionTitle;
+  final String? legalSectionTitle;
+  final String? contactSupportTitle;
+  final String? officialWebsiteTitle;
+  final String? reportBugTitle;
+  final String? reportBugSubtitle;
+  final String? bugBodyIntro;
+  final String? bugBodyVersionLabel;
+  final String? bugBodyDeviceLabel;
+  final String? privacyTitle;
+  final String? termsTitle;
+  final String? licenseTitle;
+  final String? linkRefusedMessage;
+  final String? cannotOpenMessage;
+  final String? noAppMessage;
+  final String? assetReadErrorMessage;
+  final String? linkBlockedMessage;
+
   const LegalSupportSections({
     super.key,
     required this.appName,
@@ -30,6 +51,23 @@ class LegalSupportSections extends StatelessWidget {
     this.websiteUrl = 'https://files-tech.com',
     this.privacyAsset = 'assets/legal/PRIVACY.fr.md',
     this.termsAsset = 'assets/legal/TERMS.fr.md',
+    this.helpSectionTitle,
+    this.legalSectionTitle,
+    this.contactSupportTitle,
+    this.officialWebsiteTitle,
+    this.reportBugTitle,
+    this.reportBugSubtitle,
+    this.bugBodyIntro,
+    this.bugBodyVersionLabel,
+    this.bugBodyDeviceLabel,
+    this.privacyTitle,
+    this.termsTitle,
+    this.licenseTitle,
+    this.linkRefusedMessage,
+    this.cannotOpenMessage,
+    this.noAppMessage,
+    this.assetReadErrorMessage,
+    this.linkBlockedMessage,
   });
 
   /// Schemes autorisés pour `_openUrl` et les liens Markdown.
@@ -49,14 +87,14 @@ class LegalSupportSections extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        _section(context, 'Aide & support'),
+        _section(context, helpSectionTitle ?? 'Aide & support'),
         const SizedBox(height: 8),
         Card(
           child: Column(
             children: [
               ListTile(
                 leading: Icon(Icons.email_outlined, color: cs.primary),
-                title: const Text('Contacter le support'),
+                title: Text(contactSupportTitle ?? 'Contacter le support'),
                 subtitle: Text(contactEmail),
                 trailing: const Icon(Icons.open_in_new, size: 16),
                 onTap: () => _openMail(
@@ -68,7 +106,7 @@ class LegalSupportSections extends StatelessWidget {
               const Divider(height: 1),
               ListTile(
                 leading: Icon(Icons.public, color: cs.primary),
-                title: const Text('Site officiel'),
+                title: Text(officialWebsiteTitle ?? 'Site officiel'),
                 subtitle: Text(_displayHost(websiteUrl)),
                 trailing: const Icon(Icons.open_in_new, size: 16),
                 onTap: () => _openUrl(context, websiteUrl),
@@ -76,15 +114,18 @@ class LegalSupportSections extends StatelessWidget {
               const Divider(height: 1),
               ListTile(
                 leading: Icon(Icons.bug_report_outlined, color: cs.primary),
-                title: const Text('Signaler un bug'),
-                subtitle: const Text('Email avec version pré-remplie'),
+                title: Text(reportBugTitle ?? 'Signaler un bug'),
+                subtitle: Text(
+                  reportBugSubtitle ?? 'Email avec version pré-remplie',
+                ),
                 onTap: () => _openMail(
                   context,
                   contactEmail,
                   '$appName v$version — bug',
                   body:
-                      'Décrivez le problème rencontré :\n\n\n'
-                      '— Version : $version\n— Appareil : ',
+                      '${bugBodyIntro ?? 'Décrivez le problème rencontré :'}\n\n\n'
+                      '— ${bugBodyVersionLabel ?? 'Version'} : $version\n'
+                      '— ${bugBodyDeviceLabel ?? 'Appareil'} : ',
                 ),
               ),
             ],
@@ -93,36 +134,36 @@ class LegalSupportSections extends StatelessWidget {
 
         const SizedBox(height: 24),
 
-        _section(context, 'Mentions légales'),
+        _section(context, legalSectionTitle ?? 'Mentions légales'),
         const SizedBox(height: 8),
         Card(
           child: Column(
             children: [
               ListTile(
                 leading: Icon(Icons.privacy_tip_outlined, color: cs.primary),
-                title: const Text('Politique de confidentialité'),
+                title: Text(privacyTitle ?? 'Politique de confidentialité'),
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () => _openLegal(
                   context,
-                  title: 'Politique de confidentialité',
+                  title: privacyTitle ?? 'Politique de confidentialité',
                   asset: privacyAsset,
                 ),
               ),
               const Divider(height: 1),
               ListTile(
                 leading: Icon(Icons.gavel_outlined, color: cs.primary),
-                title: const Text('Conditions d\'utilisation'),
+                title: Text(termsTitle ?? 'Conditions d\'utilisation'),
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () => _openLegal(
                   context,
-                  title: 'Conditions d\'utilisation',
+                  title: termsTitle ?? 'Conditions d\'utilisation',
                   asset: termsAsset,
                 ),
               ),
               const Divider(height: 1),
               ListTile(
                 leading: Icon(Icons.copyright_outlined, color: cs.primary),
-                title: const Text('Licence'),
+                title: Text(licenseTitle ?? 'Licence'),
                 subtitle: const Text('Apache 2.0'),
                 onTap: () => _openUrl(
                   context,
@@ -167,8 +208,10 @@ class LegalSupportSections extends StatelessWidget {
     final uri = Uri.tryParse(url);
     if (uri == null || !_isSafeUri(uri)) {
       messenger.showSnackBar(
-        const SnackBar(
-          content: Text('Lien refusé pour des raisons de sécurité.'),
+        SnackBar(
+          content: Text(
+            linkRefusedMessage ?? 'Lien refusé pour des raisons de sécurité.',
+          ),
         ),
       );
       return;
@@ -182,12 +225,20 @@ class LegalSupportSections extends StatelessWidget {
       final ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
       if (!ok) {
         messenger.showSnackBar(
-          SnackBar(content: Text('Impossible d\'ouvrir : $url')),
+          SnackBar(
+            content: Text(
+              cannotOpenMessage != null
+                  ? '$cannotOpenMessage : $url'
+                  : 'Impossible d\'ouvrir : $url',
+            ),
+          ),
         );
       }
     } catch (_) {
       messenger.showSnackBar(
-        const SnackBar(content: Text('Aucune application disponible.')),
+        SnackBar(
+          content: Text(noAppMessage ?? 'Aucune application disponible.'),
+        ),
       );
     }
   }
