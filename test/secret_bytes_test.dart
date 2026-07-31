@@ -49,6 +49,18 @@ void main() {
       expect(ro, [1, 2, 3, 4]);
     });
 
+    test('le fil-piege ne LEVE JAMAIS, meme en debug', () {
+      // Point critique de conception. `wipe` est tres souvent appelee depuis
+      // un `finally` de nettoyage : si le fil-piege levait une AssertionError,
+      // elle masquerait l'exception d'origine et transformerait un defaut
+      // d'hygiene memoire en plantage — y compris quand l'operation elle-meme
+      // avait reussi. Les tests tournent en mode debug, donc ce test
+      // exercerait bien un `assert(false, ...)` s'il en restait un.
+      final ro = Uint8List.fromList([9, 9, 9]).asUnmodifiableView();
+      expect(() => SecretBytes.wipe(ro), returnsNormally);
+      expect(SecretBytes.wipe(ro), isFalse);
+    });
+
     test('buffer vide : succès trivial', () {
       expect(SecretBytes.wipe(Uint8List(0)), isTrue);
     });

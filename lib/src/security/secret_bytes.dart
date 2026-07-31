@@ -1,6 +1,8 @@
 import 'dart:math';
 import 'dart:typed_data';
 
+import 'package:flutter/foundation.dart' show debugPrint;
+
 /// Helpers pour manipuler des octets sensibles (clés, IV, salt, MAC).
 ///
 /// Usage strict : pour de la donnée crypto (matériel de clé, comparaisons
@@ -59,6 +61,34 @@ abstract final class SecretBytes {
     } catch (_) {
       // Buffer non-modifiable : on ne peut pas effacer une vue read-only —
       // la mémoire sera libérée par GC, à une date non déterministe.
+      //
+      // FIL-PIÈGE de développement. Vérifier le retour sur chaque appel serait
+      // du bruit : dans les apps Files Tech, TOUS les buffers effacés sont
+      // modifiables par construction (`Uint8List(n)`, `fromList`, `sublist`,
+      // `base64Decode`, retours de canal de plateforme). Un échec signale donc
+      // un appelant NOUVEAU qui passe une vue en lecture seule — typiquement
+      // le retour direct d'une implémentation FFI de `cryptography_flutter`,
+      // qu'il faut alors recopier avant de le confier à `wipe`.
+      //
+      // `assert` est retiré des builds release : le comportement best-effort
+      // est inchangé en production, mais la faute devient impossible à
+      // introduire sans s'en apercevoir en développement.
+      // Forme idiomatique du fil-piège : le corps ne s'exécute qu'en debug et
+      // retourne toujours `true`, donc l'assertion NE LÈVE JAMAIS.
+      //
+      // Un `assert(false, ...)` classique rendrait `wipe` non-total. Or elle
+      // est très souvent appelée depuis un `finally` de nettoyage : une
+      // `AssertionError` levée là masquerait l'exception d'origine et
+      // transformerait un défaut d'hygiène mémoire en plantage, y compris
+      // quand l'opération elle-même avait réussi.
+      assert(() {
+        debugPrint(
+          'SecretBytes.wipe : buffer NON MODIFIABLE de ${bytes.length} octets. '
+          'Du materiel de cle restera en RAM jusqu au passage du GC. '
+          'Recopiez-le via Uint8List.fromList avant de l effacer.',
+        );
+        return true;
+      }());
       return false;
     }
   }
