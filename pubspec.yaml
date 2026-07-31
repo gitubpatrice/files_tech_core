@@ -1,6 +1,6 @@
 name: files_tech_core
 description: "Code partagé entre les apps Files Tech (PDF Tech, Read Files Tech, Pass Tech)."
-version: 0.3.2
+version: 0.3.4
 publish_to: 'none'
 
 environment:
