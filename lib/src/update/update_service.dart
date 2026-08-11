@@ -87,16 +87,30 @@ class UpdateService {
       final uri = Uri.parse(
         'https://api.github.com/repos/$owner/$repo/releases/latest',
       );
-      final response = await http
-          .get(uri, headers: {'Accept': 'application/vnd.github+json'})
-          .timeout(const Duration(seconds: 10));
-      if (response.statusCode != 200) return null;
+      final response = await _fetch(uri);
+      if (response == null) return null;
 
-      // Marque le check effectué (évite re-check pendant cacheDuration, même
-      // si pas de mise à jour disponible).
+      final Map<String, dynamic> data;
+      try {
+        final decoded = jsonDecode(response);
+        if (decoded is! Map<String, dynamic>) return null;
+        data = decoded;
+      } on FormatException {
+        // Réponse qui n'est pas du JSON : portail captif, page d'erreur d'un
+        // intermédiaire, réponse tronquée. La vérification n'a PAS eu lieu, et
+        // le cache ne doit surtout pas être marqué — voir plus bas.
+        return null;
+      }
+
+      // Le cache n'est marqué qu'ICI, une fois la réponse réellement comprise.
+      //
+      // Il l'était auparavant juste après le contrôle du code HTTP, donc AVANT
+      // `jsonDecode`. Un « 200 » accompagné d'une page HTML — le cas ordinaire
+      // d'un portail captif Wi-Fi — marquait donc la vérification comme faite,
+      // et plus aucun contrôle n'avait lieu pendant douze heures, même une fois
+      // la connexion redevenue normale. L'utilisateur restait sur « pas de mise
+      // à jour » alors que rien n'avait été vérifié.
       await prefs.setInt(_cacheKey, now);
-
-      final data = jsonDecode(response.body) as Map<String, dynamic>;
 
       // Validation type-safe : si GitHub renvoie un payload inattendu (ou
       // compte compromis publiant un asset au format custom), on refuse au
@@ -154,17 +168,115 @@ class UpdateService {
   }
 
   /// True si `remote` > `local` en version semver (3 segments majeur.mineur.patch).
+  /// Plafond de la réponse acceptée, en octets.
+  ///
+  /// Une release GitHub tient dans quelques kilo-octets. `response.body` lit
+  /// TOUT en mémoire sans borne : un intermédiaire — proxy d'entreprise,
+  /// autorité installée sur l'appareil, portail captif — pouvait faire avaler
+  /// une réponse de plusieurs centaines de mégaoctets et faire tomber
+  /// l'application.
+  static const int maxResponseBytes = 512 * 1024;
+
+  /// Hôtes acceptés pour la requête, y compris **après redirection**.
+  ///
+  /// `http.get` suit les redirections tout seul et ne revérifie ni l'hôte ni le
+  /// schéma. Un `302` vers un autre hôte — ou vers `http://` en clair —
+  /// alimentait donc l'application avec un JSON d'origine quelconque.
+  static const Set<String> allowedHosts = {'api.github.com'};
+
+  /// Récupère le corps de la réponse, ou `null` si quoi que ce soit cloche.
+  ///
+  /// Les redirections sont suivies **à la main**, pour pouvoir revalider l'hôte
+  /// et le schéma à chaque saut.
+  static Future<String?> _fetch(Uri uri) async {
+    final client = http.Client();
+    try {
+      var cible = uri;
+      for (var saut = 0; saut < 5; saut++) {
+        if (cible.scheme != 'https' || !allowedHosts.contains(cible.host)) {
+          return null;
+        }
+        final requete = http.Request('GET', cible)
+          ..followRedirects = false
+          ..headers['Accept'] = 'application/vnd.github+json';
+        final reponse = await client
+            .send(requete)
+            .timeout(const Duration(seconds: 10));
+
+        if (reponse.isRedirect) {
+          final vers = reponse.headers['location'];
+          if (vers == null) return null;
+          cible = cible.resolve(vers);
+          await reponse.stream.drain<void>();
+          continue;
+        }
+        if (reponse.statusCode != 200) {
+          await reponse.stream.drain<void>();
+          return null;
+        }
+        // Un `Content-Length` annoncé au-delà du plafond est refusé avant même
+        // de lire ; sans en-tête, le comptage ci-dessous prend le relais.
+        final annonce = reponse.contentLength;
+        if (annonce != null && annonce > maxResponseBytes) {
+          await reponse.stream.drain<void>();
+          return null;
+        }
+
+        final octets = <int>[];
+        await for (final tranche in reponse.stream) {
+          octets.addAll(tranche);
+          // Le comptage porte sur ce qui est REELLEMENT reçu, jamais sur ce que
+          // l'en-tête annonce : celui-ci est choisi par le serveur d'en face.
+          if (octets.length > maxResponseBytes) return null;
+        }
+        return utf8.decode(octets, allowMalformed: true);
+      }
+      return null;
+    } catch (_) {
+      return null;
+    } finally {
+      client.close();
+    }
+  }
+
   static bool isNewer(String remote, String local) => _isNewer(remote, local);
 
   static bool _isNewer(String remote, String local) {
-    final r = remote.split('.').map(int.tryParse).toList();
-    final l = local.split('.').map(int.tryParse).toList();
-    for (int i = 0; i < 3; i++) {
-      final rv = i < r.length ? (r[i] ?? 0) : 0;
-      final lv = i < l.length ? (l[i] ?? 0) : 0;
-      if (rv > lv) return true;
-      if (rv < lv) return false;
+    final r = _composants(remote);
+    final l = _composants(local);
+    // Une version illisible d'un côté ou de l'autre ne permet AUCUNE
+    // comparaison. Proposer une mise à jour dans le doute, c'est risquer de
+    // proposer une rétrogradation ; ne rien proposer est le repli sûr.
+    if (r == null || l == null) return false;
+    for (var i = 0; i < 3; i++) {
+      if (r[i] > l[i]) return true;
+      if (r[i] < l[i]) return false;
     }
     return false;
+  }
+
+  /// Les trois composants de [version], ou `null` si elle n'est pas un
+  /// `X.Y.Z` strict.
+  ///
+  /// **Pourquoi refuser plutôt que combler.** Chaque composant illisible valait
+  /// auparavant `0` (`int.tryParse(...) ?? 0`). Une version locale suffixée —
+  /// `1.2.3-beta`, `1.2.3+4`, ce que rend `PackageInfo` sur certaines
+  /// configurations — voyait donc son dernier composant ramené à zéro, et
+  /// `1.2.2` passait pour plus récent que `1.2.3-beta` : l'application
+  /// proposait une **rétrogradation** présentée comme une mise à jour.
+  ///
+  /// La longueur est bornée : un composant de plusieurs dizaines de milliers de
+  /// chiffres, venu d'un `tag_name` hostile, coûte cher à convertir pour rien.
+  static List<int>? _composants(String version) {
+    final parts = version.split('.');
+    if (parts.length != 3) return null;
+    final out = <int>[];
+    for (final p in parts) {
+      if (p.isEmpty || p.length > 9) return null;
+      final v = int.tryParse(p);
+      if (v == null || v < 0) return null;
+      out.add(v);
+    }
+    return out;
   }
 }
