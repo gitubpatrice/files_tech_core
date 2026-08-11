@@ -188,24 +188,49 @@ class UpdateService {
   ///
   /// Les redirections sont suivies **à la main**, pour pouvoir revalider l'hôte
   /// et le schéma à chaque saut.
+  /// Duree maximale de TOUTE l'operation, redirections et lecture du corps
+  /// comprises.
+  ///
+  /// Le delai ne portait d'abord que sur `client.send`, c'est-a-dire sur
+  /// l'obtention des en-tetes. Un serveur repondant « 200 » aussitot puis
+  /// n'envoyant plus rien laissait la lecture attendre indefiniment. C'etait
+  /// une REGRESSION par rapport a `http.get(...).timeout(...)`, qui englobait
+  /// la lecture de `response.body`. Signalee par la relecture GPT du
+  /// 2026-08-11.
+  static const Duration budgetTotal = Duration(seconds: 20);
+
+  /// Delai maximal entre deux fragments recus.
+  static const Duration budgetParFragment = Duration(seconds: 10);
+
   static Future<String?> _fetch(Uri uri) async {
     final client = http.Client();
+    final echeance = DateTime.now().add(budgetTotal);
+    Duration reste() {
+      final r = echeance.difference(DateTime.now());
+      return r.isNegative ? Duration.zero : r;
+    }
+
     try {
       var cible = uri;
       for (var saut = 0; saut < 5; saut++) {
         if (cible.scheme != 'https' || !allowedHosts.contains(cible.host)) {
           return null;
         }
+        if (reste() == Duration.zero) return null;
         final requete = http.Request('GET', cible)
           ..followRedirects = false
           ..headers['Accept'] = 'application/vnd.github+json';
-        final reponse = await client
-            .send(requete)
-            .timeout(const Duration(seconds: 10));
+        final reponse = await client.send(requete).timeout(reste());
 
         if (reponse.isRedirect) {
           final vers = reponse.headers['location'];
-          if (vers == null) return null;
+          // Un `Location` vide se resout sur l'URL courante : sans ce
+          // controle, une redirection vide faisait cinq requetes identiques
+          // avant d'abandonner.
+          if (vers == null || vers.isEmpty) {
+            await reponse.stream.drain<void>();
+            return null;
+          }
           cible = cible.resolve(vers);
           await reponse.stream.drain<void>();
           continue;
@@ -223,11 +248,13 @@ class UpdateService {
         }
 
         final octets = <int>[];
-        await for (final tranche in reponse.stream) {
+        await for (final tranche in reponse.stream.timeout(budgetParFragment)) {
+          if (DateTime.now().isAfter(echeance)) return null;
+          // La borne est verifiee AVANT d'ajouter le fragment. Elle l'etait
+          // apres : un serveur envoyant un seul fragment de 600 Ko le faisait
+          // donc entierement allouer avant d'etre refuse.
+          if (octets.length + tranche.length > maxResponseBytes) return null;
           octets.addAll(tranche);
-          // Le comptage porte sur ce qui est REELLEMENT reçu, jamais sur ce que
-          // l'en-tête annonce : celui-ci est choisi par le serveur d'en face.
-          if (octets.length > maxResponseBytes) return null;
         }
         return utf8.decode(octets, allowMalformed: true);
       }
