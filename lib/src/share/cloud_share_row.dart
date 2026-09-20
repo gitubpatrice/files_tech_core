@@ -95,7 +95,9 @@ class CloudShareRow extends StatelessWidget {
       alignment: alignment,
       children: [
         OutlinedButton.icon(
-          onPressed: () => Share.shareXFiles([XFile(path, mimeType: mime)]),
+          onPressed: () => SharePlus.instance.share(
+            ShareParams(files: [XFile(path, mimeType: mime)]),
+          ),
           icon: const Icon(Icons.share, size: 14),
           label: const Text('Partager', style: TextStyle(fontSize: 12)),
         ),

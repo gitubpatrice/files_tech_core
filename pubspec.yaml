@@ -1,6 +1,6 @@
 name: files_tech_core
 description: "Code partagé entre les apps Files Tech (PDF Tech, Read Files Tech, Pass Tech)."
-version: 0.3.4
+version: 0.3.5
 publish_to: 'none'
 
 environment:
@@ -12,7 +12,22 @@ dependencies:
     sdk: flutter
   http: ^1.2.0
   shared_preferences: ^2.3.2
-  share_plus: ^10.0.3
+  # 13.x, et non 10.x. Cette contrainte etait le verrou de toute la chaine de
+  # dependances des apps Flutter du portefeuille :
+  #
+  #   share_plus ^10  ->  win32 ^5.5.3
+  #                   ->  bloque package_info_plus 10 (qui exige win32 ^6.0.1)
+  #                   ->  bloque file_picker 13        (qui exige win32 ^6.3.0)
+  #                   ->  bloque syncfusion 34
+  #
+  # Les pubspec des apps attribuaient ce blocage a `file_picker` et le
+  # decrivaient comme une fatalite amont. Mesure au solveur le 2026-09-20 :
+  # la racine etait ici, dans une ligne d'un depot que nous possedons.
+  #
+  # Le bump n'entraine aucune app malgre lui : les cinq applications Flutter
+  # epinglent `files_tech_core` par commit, donc aucune ne suit avant d'avoir
+  # deplace son propre `ref:`.
+  share_plus: ^13.3.0
   flutter_markdown: ^0.7.4
   url_launcher: ^6.3.0
 
